@@ -7,31 +7,52 @@ const DATABASE_ID = "81905f0c5b474254b19e8cf84fb2e83d";
 
 export default function TabTwoScreen() {
   const [columns, setColumns] = useState<string[]>([]); // Store column names
+  const [rows, setRows] = useState<any[]>([]); // Store database rows
   const [loading, setLoading] = useState(true); // Loading state
 
-  // Fetch database schema from Notion API
+  // Fetch database schema and rows
   useEffect(() => {
-    const fetchDatabaseColumns = async () => {
+    const fetchDatabaseData = async () => {
       try {
-        const response = await fetch(
+        // Fetch database schema
+        const schemaResponse = await fetch(
           `https://api.notion.com/v1/databases/${DATABASE_ID}`,
           {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${NOTION_SECRET}`,
               'Content-Type': 'application/json',
-              'Notion-Version': '2022-06-28', // Use the latest API version
+              'Notion-Version': '2022-06-28',
             },
           }
         );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch database columns');
-        }
+        if (!schemaResponse.ok) throw new Error('Failed to fetch database schema');
 
-        const data = await response.json();
-        const properties = Object.keys(data.properties); // Extract column names
-        setColumns(properties); // Update state with column names
+        const schemaData = await schemaResponse.json();
+        const properties = Object.keys(schemaData.properties); // Extract column names
+        setColumns(properties);
+
+        // Fetch database rows (pages)
+        const rowsResponse = await fetch(
+          `https://api.notion.com/v1/databases/${DATABASE_ID}/query`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${NOTION_SECRET}`,
+              'Content-Type': 'application/json',
+              'Notion-Version': '2022-06-28',
+            },
+            body: JSON.stringify({
+              page_size: 5, // Fetch 5 rows
+            }),
+          }
+        );
+
+        if (!rowsResponse.ok) throw new Error('Failed to fetch database rows');
+
+        const rowsData = await rowsResponse.json();
+        setRows(rowsData.results); // Save rows data
         setLoading(false); // Mark loading as complete
       } catch (error) {
         console.error(error);
@@ -39,7 +60,7 @@ export default function TabTwoScreen() {
       }
     };
 
-    fetchDatabaseColumns();
+    fetchDatabaseData();
   }, []);
 
   return (
@@ -73,9 +94,56 @@ export default function TabTwoScreen() {
           </View>
         )}
       </View>
+
+      {/* Database Rows Section */}
+      <View style={styles.section}>
+        <Text style={styles.bold_subheader}>Notion Database Rows</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#007BFF" />
+        ) : (
+          <View>
+            {rows.length > 0 ? (
+              rows.map((row, index) => (
+                <View key={index} style={styles.rowContainer}>
+                  {columns.map((column) => (
+                    <Text key={column} style={styles.rowText}>
+                      {column}: {getRowValue(row, column)}
+                    </Text>
+                  ))}
+                  <View style={styles.rowDivider} />
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>No rows found!</Text>
+            )}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
+
+// Helper function to extract row data for a column
+const getRowValue = (row, column) => {
+  if (row.properties[column]) {
+    const property = row.properties[column];
+
+    // Handle different property types (Title, Text, Select, etc.)
+    if (property.type === 'title') {
+      return property.title[0]?.plain_text || 'N/A';
+    } else if (property.type === 'rich_text') {
+      return property.rich_text[0]?.plain_text || 'N/A';
+    } else if (property.type === 'select') {
+      return property.select?.name || 'N/A';
+    } else if (property.type === 'date') {
+      return property.date?.start || 'N/A';
+    } else if (property.type === 'multi_select') {
+      return property.multi_select.map((option) => option.name).join(', ') || 'N/A';
+    }
+  }
+
+  return 'N/A';
+};
 
 // Styles
 const styles = StyleSheet.create({
@@ -112,7 +180,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   section: {
-    backgroundColor: '#fc827e',
+    backgroundColor: '#9be09b',
     marginBottom: 16,
     padding: 16,
     marginTop: 15,
@@ -127,5 +195,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  rowContainer: {
+    marginBottom: 10,
+  },
+  rowText: {
+    fontSize: 14,
+    marginVertical: 2,
+    color: '#555',
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: '#ddd',
+    marginVertical: 8,
   },
 });
