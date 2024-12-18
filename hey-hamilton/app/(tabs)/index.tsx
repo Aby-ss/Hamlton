@@ -1,62 +1,98 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TextInput, Button, FlatList } from 'react-native';
 
-// Main component that represents the home screen
 export default function HomeScreen() {
-  const [text, onChangeText] = React.useState('Useless Text');
-  const [number, onChangeNumber] = React.useState('');
+  const [inputText, setInputText] = React.useState(''); // State for the TextInput value
+  const [todoList, setTodoList] = React.useState<string[]>([]); // State for todo list
+
+  // Function to add the entered text to the todo list
+  const handleAddTodo = () => {
+    if (inputText.trim() !== '') {
+      setTodoList([...todoList, inputText]); // Append the new todo to the list
+      setInputText(''); // Clear the TextInput
+    }
+  };
+
+  // Function to remove a todo item by index
+  const handleRemoveTodo = (index: number) => {
+    setTodoList(todoList.filter((_, i) => i !== index)); // Filter out the selected todo
+  };
 
   return (
-    // Container for the entire screen with ScrollView for scrolling
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-      {/* Header section with an image */}
+      {/* Header section */}
       <View style={styles.header}>
         <Image
-          source={require('@/assets/images/adaptive-icon.png')} // Replace with your own image path
+          source={require('@/assets/images/adaptive-icon.png')}
           style={styles.headerImage}
         />
         <Text style={styles.headerText}>Good Morning, Rao</Text>
         <Text style={styles.subheader}>Tuesday 3 December, 2024</Text>
       </View>
 
-      {/* Todo Section */}
+      {/* Input and Add Todo Button */}
       <View style={styles.section}>
         <Text style={styles.bold_subheader}>Todo</Text>
         <TextInput
           style={styles.input}
-          onChangeText={onChangeNumber}
-          value={number}
-          placeholder="enter your todo"
-          keyboardType="numeric"
+          onChangeText={setInputText}
+          value={inputText}
+          placeholder="Enter your todo"
+          onSubmitEditing={handleAddTodo} // Handles pressing 'Enter' on the keyboard
         />
+        <TouchableOpacity style={styles.button} onPress={handleAddTodo}>
+          <Text style={styles.buttonText}>Add Todo</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Render the todo list */}
+      <View style={styles.section}>
+        <Text style={styles.bold_subheader}>Your Todos</Text>
+        {todoList.length > 0 ? (
+          <FlatList
+            data={todoList}
+            keyExtractor={(item, index) => index.toString()} // Unique key for each item
+            renderItem={({ item, index }) => (
+              <View style={styles.todoContainer}>
+                <TouchableOpacity onPress={() => handleRemoveTodo(index)}>
+                  <Text style={styles.checkmark}>✅</Text>
+                </TouchableOpacity>
+                <Text style={styles.todoItem}>{item}</Text>
+              </View>
+            )}
+          />
+        ) : (
+          <Text style={styles.noTodoText}>No todos added yet!</Text>
+        )}
       </View>
     </ScrollView>
   );
 }
 
-// Styles for various components
+// Styles
 const styles = StyleSheet.create({
   scrollContainer: {
-    flexGrow: 1, // Ensures the ScrollView adapts to its content
-    backgroundColor: '#f5f5f5', // Light gray background color
-    padding: 16, // Padding around the edges
+    flexGrow: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 16,
   },
   header: {
-    alignItems: 'center', // Center the header content horizontally
-    marginBottom: 22, // Spacing below the header
+    alignItems: 'center',
+    marginBottom: 22,
   },
   headerImage: {
-    width: 80, // Width of the image
-    height: 80, // Height of the image
-    borderRadius: 75, // Makes the image circular
+    width: 80,
+    height: 80,
+    borderRadius: 75,
     marginTop: 65,
     marginRight: 285,
   },
   headerText: {
-    fontSize: 25, // Large font size for the header text
-    fontWeight: 'bold', // Bold text
-    color: '#333', // Dark gray text color
-    marginTop: -65, // Adjust positioning
+    fontSize: 25,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: -65,
     marginLeft: 50,
   },
   subheader: {
@@ -69,20 +105,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   section: {
-    backgroundColor: '#fc827e', // Light gray background for sections
-    marginBottom: 16, // Spacing below each section
+    backgroundColor: '#fc827e',
+    marginBottom: 16,
     padding: 16,
     marginTop: 15,
     borderRadius: 5,
-  },
-  paragraph: {
-    fontSize: 16, // Normal font size for paragraphs
-    color: '#666', // Lighter gray color
-    lineHeight: 22, // Better line spacing for readability
-  },
-  bold: {
-    fontWeight: 'bold', // Bold text for emphasis
-    color: '#000', // Black text for emphasis
   },
   input: {
     height: 40,
@@ -90,5 +117,35 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 5,
     padding: 10,
+  },
+  todoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  checkmark: {
+    fontSize: 28,
+    marginRight: 10,
+    color: 'green',
+  },
+  todoItem: {
+    fontSize: 16,
+  },
+  noTodoText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#007BFF',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    margin: 12,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
